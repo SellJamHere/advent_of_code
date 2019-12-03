@@ -24,6 +24,7 @@ func main() {
 
 	fmt.Printf("postition zero value: %d\n", memory[0])
 
+	// Part 2
 	for noun := 0; noun <= 99; noun++ {
 		for verb := 0; verb <= 99; verb++ {
 			copy(memory, program)
@@ -69,20 +70,20 @@ type instruction struct {
 }
 
 func getInstruction(index int, program []int) (instruction, error) {
-	opcode := program[index]
-	if Opcode(opcode) != add && Opcode(opcode) != mul && Opcode(opcode) != halt {
+	opcode := Opcode(program[index])
+	if opcode != add && opcode != mul && opcode != halt {
 		return instruction{}, fmt.Errorf("unknown opcode: %d", opcode)
 	}
 
 	if Opcode(opcode) == halt {
-		return instruction{opcode: Opcode(opcode)}, nil
+		return instruction{opcode: opcode}, nil
 	}
 
 	val1 := program[index+1]
 	val2 := program[index+2]
 	dest := program[index+3]
 
-	inst := instruction{Opcode(opcode), val1, val2, dest}
+	inst := instruction{opcode, val1, val2, dest}
 
 	return inst, nil
 }
