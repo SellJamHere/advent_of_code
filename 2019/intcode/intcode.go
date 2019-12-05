@@ -9,10 +9,16 @@ import (
 type Opcode int
 
 const (
-	add  Opcode = 1
-	mul  Opcode = 2
-	sav  Opcode = 3
-	out  Opcode = 4
+	add Opcode = 1
+	mul Opcode = 2
+	sav Opcode = 3
+	out Opcode = 4
+
+	jmt Opcode = 5
+	jmf Opcode = 6
+	lt  Opcode = 7
+	eq  Opcode = 8
+
 	halt Opcode = 99
 )
 
@@ -80,6 +86,10 @@ func getInstruction(instructionPointer *int, program []int) (instruction, error)
 		opcode != mul &&
 		opcode != sav &&
 		opcode != out &&
+		opcode != jmt &&
+		opcode != jmf &&
+		opcode != lt &&
+		opcode != eq &&
 		opcode != halt {
 		return instruction{}, fmt.Errorf("unknown opcode: %d", opcode)
 	}
@@ -91,7 +101,7 @@ func getInstruction(instructionPointer *int, program []int) (instruction, error)
 	inst := instruction{
 		opcode: opcode,
 	}
-	if opcode == add || opcode == mul {
+	if opcode == add || opcode == mul || opcode == lt || opcode == eq {
 		inst.val1Adr = program[ip+1]
 		inst.val1Mode = defaultModes[0]
 		inst.val2Adr = program[ip+2]
@@ -99,6 +109,12 @@ func getInstruction(instructionPointer *int, program []int) (instruction, error)
 		inst.destAdr = program[ip+3]
 		inst.destMode = defaultModes[2]
 		*instructionPointer = ip + 4
+	} else if opcode == jmt || opcode == jmf {
+		inst.val1Adr = program[ip+1]
+		inst.val1Mode = defaultModes[0]
+		inst.destAdr = program[ip+2]
+		inst.destMode = defaultModes[1]
+		*instructionPointer = ip + 3
 	} else if opcode == sav || opcode == out {
 		inst.val1Adr = program[ip+1]
 		inst.val1Mode = defaultModes[0]
@@ -178,15 +194,111 @@ func outputValues(inst instruction, program []int) int {
 	return -1 * math.MaxInt64
 }
 
-func RunProgram(memory []int) error {
+func jumpIfTrue(instructionPointer *int, inst instruction, program []int) {
+	var val1 int
+	switch inst.val1Mode {
+	case pos:
+		val1 = program[inst.val1Adr]
+	case imd:
+		val1 = inst.val1Adr
+	}
+
+	var dest int
+	switch inst.destMode {
+	case pos:
+		dest = program[inst.destAdr]
+	case imd:
+		dest = inst.destAdr
+	}
+
+	if val1 != 0 {
+		*instructionPointer = dest
+	}
+}
+
+func jumpIfFalse(instructionPointer *int, inst instruction, program []int) {
+	var val1 int
+	switch inst.val1Mode {
+	case pos:
+		val1 = program[inst.val1Adr]
+	case imd:
+		val1 = inst.val1Adr
+	}
+
+	var dest int
+	switch inst.destMode {
+	case pos:
+		dest = program[inst.destAdr]
+	case imd:
+		dest = inst.destAdr
+	}
+
+	if val1 == 0 {
+		*instructionPointer = dest
+	}
+}
+
+func lessThan(inst instruction, program []int) {
+	var val1 int
+	switch inst.val1Mode {
+	case pos:
+		val1 = program[inst.val1Adr]
+	case imd:
+		val1 = inst.val1Adr
+	}
+
+	var val2 int
+	switch inst.val2Mode {
+	case pos:
+		val2 = program[inst.val2Adr]
+	case imd:
+		val2 = inst.val2Adr
+	}
+
+	destVal := 0
+	if val1 < val2 {
+		destVal = 1
+	}
+
+	program[inst.destAdr] = destVal
+}
+
+func equals(inst instruction, program []int) {
+	var val1 int
+	switch inst.val1Mode {
+	case pos:
+		val1 = program[inst.val1Adr]
+	case imd:
+		val1 = inst.val1Adr
+	}
+
+	var val2 int
+	switch inst.val2Mode {
+	case pos:
+		val2 = program[inst.val2Adr]
+	case imd:
+		val2 = inst.val2Adr
+	}
+
+	destVal := 0
+	if val1 == val2 {
+		destVal = 1
+	}
+
+	program[inst.destAdr] = destVal
+}
+
+func RunProgram(memory []int, inputs []int) error {
 	instructionPointer := 0
 	inst, err := getInstruction(&instructionPointer, memory)
 	if err != nil {
 		return err
 	}
 
+	inputIdx := 0
 	for inst.opcode != halt {
 		// fmt.Printf("%+v\n", inst)
+		// fmt.Println(memory)
 
 		switch inst.opcode {
 		case add:
@@ -194,11 +306,18 @@ func RunProgram(memory []int) error {
 		case mul:
 			mulValues(inst, memory)
 		case sav:
-			// "After providing 1 to the only input instruction"
-			saveValues(inst, 1, memory)
+			saveValues(inst, inputs[inputIdx], memory)
 		case out:
 			output := outputValues(inst, memory)
 			fmt.Println(output)
+		case jmt:
+			jumpIfTrue(&instructionPointer, inst, memory)
+		case jmf:
+			jumpIfFalse(&instructionPointer, inst, memory)
+		case lt:
+			lessThan(inst, memory)
+		case eq:
+			equals(inst, memory)
 		}
 
 		// instructionPointer += inst.instructionPointerOffset()
