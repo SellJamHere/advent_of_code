@@ -288,17 +288,14 @@ func equals(inst instruction, program []int) {
 	program[inst.destAdr] = destVal
 }
 
-func RunProgram(memory []int, inputs []int) error {
+func RunProgram(tag int, memory []int, input <-chan int, output chan<- int) error {
 	instructionPointer := 0
 	inst, err := getInstruction(&instructionPointer, memory)
 	if err != nil {
 		return err
 	}
 
-	inputIdx := 0
 	for inst.opcode != halt {
-		// fmt.Printf("%+v\n", inst)
-		// fmt.Println(memory)
 
 		switch inst.opcode {
 		case add:
@@ -306,10 +303,14 @@ func RunProgram(memory []int, inputs []int) error {
 		case mul:
 			mulValues(inst, memory)
 		case sav:
-			saveValues(inst, inputs[inputIdx], memory)
+			// fmt.Printf("%d: waiting for input\n", tag)
+			in := <-input
+			saveValues(inst, in, memory)
+			// fmt.Printf("%d: input received: %d\n", tag, in)
 		case out:
-			output := outputValues(inst, memory)
-			fmt.Println(output)
+			out := outputValues(inst, memory)
+			// fmt.Printf("%d: output: %d\n", tag, out)
+			output <- out
 		case jmt:
 			jumpIfTrue(&instructionPointer, inst, memory)
 		case jmf:
