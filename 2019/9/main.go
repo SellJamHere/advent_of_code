@@ -15,14 +15,9 @@ func main() {
 		panic(err)
 	}
 
-	memory := map[int]int{}
-	for i, val := range program {
-		memory[i] = val
-	}
+	memory := intcode.NewMemory(program)
 
-	fmt.Println(memory)
-
-	input := make(chan int, 1)
+	input := make(chan int)
 	output := make(chan int)
 	go func(memory map[int]int, input, output chan int) {
 		err = intcode.RunProgram(0, memory, input, output)
@@ -36,7 +31,26 @@ func main() {
 	input <- 1
 
 	for out := range output {
-		fmt.Println("output:", out)
+		fmt.Println("BOOST keycode:", out)
+	}
+
+	// Part 2
+	memory = intcode.NewMemory(program)
+	input = make(chan int)
+	output = make(chan int)
+	go func(memory map[int]int, input, output chan int) {
+		err = intcode.RunProgram(0, memory, input, output)
+		if err != nil {
+			panic(err)
+		}
+
+		close(output)
+	}(memory, input, output)
+
+	input <- 2
+
+	for out := range output {
+		fmt.Println("Distress Coordinates:", out)
 	}
 }
 

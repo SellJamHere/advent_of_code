@@ -54,6 +54,26 @@ func (i instruction) instructionPointerOffset() int {
 	return -1
 }
 
+type Memory map[int]int
+
+func NewMemory(program []int) Memory {
+	mem := Memory{}
+	for i, val := range program {
+		mem[i] = val
+	}
+
+	return mem
+}
+
+func (m Memory) Copy() Memory {
+	mem := Memory{}
+	for i, val := range m {
+		mem[i] = val
+	}
+
+	return mem
+}
+
 func getInstruction(instructionPointer *int, program map[int]int) (instruction, error) {
 	ip := *instructionPointer
 
