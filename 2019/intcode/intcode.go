@@ -260,7 +260,6 @@ func RunProgram(tag int, memory map[int]int, input <-chan int, output chan<- int
 	}
 
 	relativeBase := 0
-
 	for inst.opcode != halt {
 		switch inst.opcode {
 		case add:
