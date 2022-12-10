@@ -155,8 +155,6 @@ func findMostScenicTree(mapArr [][]int) int {
 			if totalScore > highestScenicScore {
 				highestScenicScore = totalScore
 			}
-
-			fmt.Printf("(%d, %d): %d\n", i, j, totalScore)
 		}
 	}
 
