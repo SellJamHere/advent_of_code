@@ -88,6 +88,7 @@ func main() {
 		clock++
 	}
 
+	fmt.Println("part 2:")
 	fmt.Println(screen)
 }
 
