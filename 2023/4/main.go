@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 )
 
@@ -47,35 +48,65 @@ func part2() {
 
 	var stack []int
 
+	cardCache := map[int]map[string][]int{}
 	for i := 0; i < len(lines); i++ {
 		stack = append(stack, i)
-	}
 
-	var cardVisitedMap = map[int]int{}
-	for len(stack) > 0 {
-		cardIdx := stack[0]
-		stack = stack[1:]
-
-		cardVisitedMap[cardIdx+1] = cardVisitedMap[cardIdx+1] + 1
-
-		card := lines[cardIdx]
+		card := lines[i]
 		cardParts := strings.Split(card, ":")
 		numberParts := strings.Split(cardParts[1], "|")
 		winningNumbers := strings.Split(strings.TrimSpace(numberParts[0]), " ")
 		myNumbers := strings.Split(strings.TrimSpace(numberParts[1]), " ")
 
-		myNumberMap := map[string]struct{}{}
-		for _, myNumber := range myNumbers {
-			if myNumber != "" {
-				myNumberMap[myNumber] = struct{}{}
+		var winningNums []int
+		for _, num := range winningNumbers {
+			if num == "" {
+				continue
 			}
+
+			n, _ := strconv.Atoi(num)
+			winningNums = append(winningNums, n)
 		}
 
-		var matchingNumbers []string
-		for _, winningNum := range winningNumbers {
-			if _, ok := myNumberMap[winningNum]; ok {
-				matchingNumbers = append(matchingNumbers, winningNum)
+		var myNums []int
+		for _, num := range myNumbers {
+			if num == "" {
+				continue
 			}
+
+			n, _ := strconv.Atoi(num)
+			myNums = append(myNums, n)
+		}
+
+		cardCache[i] = map[string][]int{
+			"winning": winningNums,
+			"mine":    myNums,
+		}
+	}
+
+	matchingNumberCache := map[int][]int{}
+	totalVisited := 0
+	for len(stack) > 0 {
+		cardIdx := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		totalVisited++
+
+		card := cardCache[cardIdx]
+
+		matchingNumbers, ok := matchingNumberCache[cardIdx]
+		if !ok {
+			myNumberMap := map[int]struct{}{}
+			for _, myNumber := range card["mine"] {
+				myNumberMap[myNumber] = struct{}{}
+			}
+
+			for _, winningNum := range card["winning"] {
+				if _, ok := myNumberMap[winningNum]; ok {
+					matchingNumbers = append(matchingNumbers, winningNum)
+				}
+			}
+			matchingNumberCache[cardIdx] = matchingNumbers
 		}
 
 		matchCount := len(matchingNumbers)
@@ -84,16 +115,7 @@ func part2() {
 		}
 	}
 
-	totalCards := 0
-	for _, cardCount := range cardVisitedMap {
-		totalCards += cardCount
-	}
-
-	fmt.Println("part 2 total:", totalCards)
-}
-
-func processCards(cards []string) {
-
+	fmt.Println("part 2 total:", totalVisited)
 }
 
 const sampleInput = `Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
