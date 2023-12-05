@@ -5,11 +5,17 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 func main() {
+	start := time.Now()
 	seeds, allMaps := parseInput(puzzleInput)
 
+	fmt.Printf("(%s) parsed input\n", time.Now().Sub(start))
+
+	start = time.Now()
 	lowestSeedLocation := math.MaxInt
 	for _, seed := range seeds {
 		currLookupVal := seed
@@ -28,35 +34,55 @@ func main() {
 		}
 	}
 
-	fmt.Println("part 1 lowest location:", lowestSeedLocation)
+	fmt.Printf("(%s) part 1 lowest location: %d\n", time.Now().Sub(start), lowestSeedLocation)
 
+	start = time.Now()
 	// Calculate seed pairs
 	var seedPairs [][]int
 	for i := 0; i < len(seeds); i += 2 {
 		seedPairs = append(seedPairs, []int{seeds[i], seeds[i+1]})
 	}
 
-	lowestSeedLocation = math.MaxInt
+	locationCh := make(chan int)
+	wg := &sync.WaitGroup{}
 	for _, seedPair := range seedPairs {
-		// Iterate over all values in seed range
-		for seed := seedPair[0]; seed < seedPair[0]+seedPair[1]; seed++ {
-			currLookupVal := seed
-			for _, mappings := range allMaps {
-				for _, thisMap := range mappings {
-					if currLookupVal >= thisMap.sourceStart && currLookupVal < thisMap.sourceStart+thisMap.length {
-						valOffset := thisMap.destinationStart - thisMap.sourceStart
-						currLookupVal += valOffset
-						break
+		wg.Add(1)
+		go func(seedPair []int) {
+			// Iterate over all values in seed range
+			lowestSeedLocationInRange := math.MaxInt
+			for seed := seedPair[0]; seed < seedPair[0]+seedPair[1]; seed++ {
+				currLookupVal := seed
+				for _, mappings := range allMaps {
+					for _, thisMap := range mappings {
+						if currLookupVal >= thisMap.sourceStart && currLookupVal < thisMap.sourceStart+thisMap.length {
+							valOffset := thisMap.destinationStart - thisMap.sourceStart
+							currLookupVal += valOffset
+							break
+						}
 					}
 				}
+				if currLookupVal < lowestSeedLocationInRange {
+					lowestSeedLocationInRange = currLookupVal
+				}
 			}
-			if currLookupVal < lowestSeedLocation {
-				lowestSeedLocation = currLookupVal
-			}
-		}
+
+			locationCh <- lowestSeedLocationInRange
+			wg.Done()
+		}(seedPair)
 	}
 
-	fmt.Println("part 2 lowest location:", lowestSeedLocation)
+	lowestSeedLocation = math.MaxInt
+	go func() {
+		for location := range locationCh {
+			if location < lowestSeedLocation {
+				lowestSeedLocation = location
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	fmt.Printf("(%s) part 2 lowest location: %d\n", time.Now().Sub(start), lowestSeedLocation)
 }
 
 type mapRange struct {
